@@ -21,6 +21,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef SDLPDCURSES
+# include <SDL.h>
+#endif
+
 #include "display.h"
 #include "fov.h"
 #include "map.h"
@@ -81,6 +85,13 @@ const display_colset display_dialog_colset[] =
 };
 
 static gboolean display_initialised = FALSE;
+
+
+#ifdef SDLPDCURSES
+/* SDL fullscreen mode */
+extern SDL_Window *pdc_window;
+static int fullscreen = 0;
+#endif
 
 /* linked list of opened windows */
 static GList *windows = NULL;
@@ -2930,6 +2941,16 @@ int display_getch(WINDOW *win) {
     return ch;
 }
 
+#ifdef SDLPDCURSES
+void display_toggle_fullscreen()
+{
+    fullscreen = fullscreen == SDL_WINDOW_FULLSCREEN_DESKTOP
+        ? 0
+        : SDL_WINDOW_FULLSCREEN_DESKTOP;
+
+    SDL_SetWindowFullscreen(pdc_window, fullscreen);
+}
+#endif
 
 static int mvwcprintw(WINDOW *win, int defattr, int currattr,
         const display_colset *colset, int y, int x, const char *fmt, ...)
@@ -3175,6 +3196,13 @@ static int display_window_move(display_window *dwin, int key)
     case 481: /* PDCurses - Windows */
         if (dwin->y1 < (LINES - dwin->height)) dwin->y1++;
         break;
+
+#ifdef SDLPDCURSES
+    case 13: /* ENTER */
+        if (PDC_get_key_modifiers() & PDC_KEY_MODIFIER_ALT)
+            display_toggle_fullscreen();
+        break;
+#endif
 
     default:
         need_refresh = FALSE;
